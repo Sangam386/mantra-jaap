@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export interface UploadedTrack {
@@ -16,6 +16,10 @@ export function useUploadedTracks() {
   const [isUploading, setIsUploading] = useState(false);
 
   const fetchTracks = useCallback(async () => {
+    if (!isSupabaseConfigured || !supabase) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -37,6 +41,11 @@ export function useUploadedTracks() {
   }, [fetchTracks]);
 
   const uploadTrack = useCallback(async (file: File) => {
+    if (!isSupabaseConfigured || !supabase) {
+      toast.error('Upload feature is not available');
+      return null;
+    }
+
     if (!file.type.startsWith('audio/')) {
       toast.error('Please upload an audio file');
       return null;
@@ -50,7 +59,7 @@ export function useUploadedTracks() {
     setIsUploading(true);
     try {
       const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('ambient-music')
         .upload(fileName, file);
@@ -88,6 +97,11 @@ export function useUploadedTracks() {
   }, []);
 
   const deleteTrack = useCallback(async (track: UploadedTrack) => {
+    if (!isSupabaseConfigured || !supabase) {
+      toast.error('Delete feature is not available');
+      return;
+    }
+
     try {
       const { error: storageError } = await supabase.storage
         .from('ambient-music')
@@ -117,5 +131,6 @@ export function useUploadedTracks() {
     uploadTrack,
     deleteTrack,
     refetch: fetchTracks,
+    isSupabaseConfigured,
   };
 }
